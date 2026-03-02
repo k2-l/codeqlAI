@@ -1,0 +1,13 @@
+[2026-03-02 08:36:39] This is codeql database analyze storage/33092db5-88a7-49b8-95ea-db60530e9a09/codeql-db codeql/java-queries:codeql-suites/java-security-and-quality.qls --format=sarif-latest --output=storage/33092db5-88a7-49b8-95ea-db60530e9a09/results.sarif --threads=4
+[2026-03-02 08:36:39] Log file was started late.
+[2026-03-02 08:36:39] [PROGRESS] database analyze> Running queries.
+[2026-03-02 08:36:39] Running plumbing command: codeql database run-queries --evaluator-log-level=5 --threads=4 --warnings=show --qlconfig-file=/root/codeqlAI/qlconfig.yml --dynamic-join-order-mode=none --no-rerun --interpret-passthrough=null,--format=sarif-latest,-o=/root/codeqlAI/storage/33092db5-88a7-49b8-95ea-db60530e9a09/results.sarif,--max-paths=4,--csv-location-format=line-column,--print-diagnostics-summary,--print-metrics-summary,--threads=4,--qlconfig-file=/root/codeqlAI/qlconfig.yml,--,/root/codeqlAI/storage/33092db5-88a7-49b8-95ea-db60530e9a09/codeql-db,codeql/java-queries:codeql-suites/java-security-and-quality.qls -- /root/codeqlAI/storage/33092db5-88a7-49b8-95ea-db60530e9a09/codeql-db codeql/java-queries:codeql-suites/java-security-and-quality.qls
+[2026-03-02 08:36:39] Calling plumbing command: codeql resolve ram --dataset=/root/codeqlAI/storage/33092db5-88a7-49b8-95ea-db60530e9a09/codeql-db/db-java --format=json
+[2026-03-02 08:36:39] [PROGRESS] resolve ram> Stringpool size measured as 2916762
+[2026-03-02 08:36:39] Plumbing command codeql resolve ram completed:
+                      [
+                        "-J-Xmx1368M"
+                      ]
+[2026-03-02 08:36:39] Chaining via /tmp/codeql.BuKOzsZ0 to plumbing: execute queries -J-Xmx1368M --verbosity=progress --logdir=/root/codeqlAI/storage/33092db5-88a7-49b8-95ea-db60530e9a09/codeql-db/log --evaluator-log-level=5 --threads=4 --warnings=show --qlconfig-file=/root/codeqlAI/qlconfig.yml --dynamic-join-order-mode=none --no-rerun --interpret-passthrough=null,--format=sarif-latest,-o=/root/codeqlAI/storage/33092db5-88a7-49b8-95ea-db60530e9a09/results.sarif,--max-paths=4,--csv-location-format=line-column,--print-diagnostics-summary,--print-metrics-summary,--threads=4,--qlconfig-file=/root/codeqlAI/qlconfig.yml,--,/root/codeqlAI/storage/33092db5-88a7-49b8-95ea-db60530e9a09/codeql-db,codeql/java-queries:codeql-suites/java-security-and-quality.qls --output=/root/codeqlAI/storage/33092db5-88a7-49b8-95ea-db60530e9a09/codeql-db/results -- /root/codeqlAI/storage/33092db5-88a7-49b8-95ea-db60530e9a09/codeql-db/db-java codeql/java-queries:codeql-suites/java-security-and-quality.qls
+[2026-03-02 08:36:39] Plumbing command codeql database run-queries completed with status 70.
+[2026-03-02 08:36:39] Exiting with code 70

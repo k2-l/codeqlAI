@@ -99,10 +99,11 @@ func (p *Project) BeforeCreate(tx *gorm.DB) error {
 type Task struct {
 	ID           uuid.UUID  `gorm:"type:uuid;primaryKey"              json:"id"`
 	ProjectID    uuid.UUID  `gorm:"type:uuid;not null;index"          json:"project_id"`
+	DisplayName  string     `gorm:"type:varchar(100);index"           json:"display_name"` // 用户自定义任务名
 	Language     Language   `gorm:"type:varchar(20);not null"         json:"language"`
 	Status       TaskStatus `gorm:"type:varchar(20);not null;default:'pending'" json:"status"`
-	ErrorLog     string     `gorm:"type:text"                         json:"error_log,omitempty"`  // 失败时记录原因
-	CodeqlDBPath string     `gorm:"type:varchar(1024)"                json:"codeql_db_path"`       // 扫描完成后会清空
+	ErrorLog     string     `gorm:"type:text"                         json:"error_log,omitempty"`
+	CodeqlDBPath string     `gorm:"type:varchar(1024)"                json:"codeql_db_path"`
 	SarifPath    string     `gorm:"type:varchar(1024)"                json:"sarif_path"`
 	StartedAt    *time.Time `gorm:"default:null"                      json:"started_at,omitempty"`
 	FinishedAt   *time.Time `gorm:"default:null"                      json:"finished_at,omitempty"`
@@ -140,8 +141,8 @@ type Finding struct {
 	UpdatedAt   time.Time   `gorm:"autoUpdateTime"                              json:"updated_at"`
 
 	// 关联
-	Task     Task      `gorm:"foreignKey:TaskID"     json:"task,omitempty"`
-	AiResult *AiResult `gorm:"foreignKey:FindingID"  json:"ai_result,omitempty"` // 指针：没审计过则为 nil
+	Task     Task      `gorm:"foreignKey:TaskID"     json:"-"`
+	AiResult *AiResult `gorm:"foreignKey:FindingID"  json:"ai_result,omitempty"`
 }
 
 func (f *Finding) BeforeCreate(tx *gorm.DB) error {

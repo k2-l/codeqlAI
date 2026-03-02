@@ -1,0 +1,27 @@
+[2026-03-02 08:36:20] [javac-extractor-22034] Starting extraction for:
+                                              sun.java.command=com.semmle.extractor.java.JavaExtractor --jdk-version 11 --javac-args @@@/root/codeqlAI/storage/33092db5-88a7-49b8-95ea-db60530e9a09/codeql-db/log/ext/javac.args
+                                              user.dir=/root/codeqlAI/storage/33092db5-88a7-49b8-95ea-db60530e9a09/source
+[2026-03-02 08:36:20] [javac-extractor-22034] Compilation name /root/codeqlAI/storage/33092db5-88a7-49b8-95ea-db60530e9a09/codeql-db/trap/java/diagnostics/diagnostic.trap.gz
+[2026-03-02 08:36:20] [javac-extractor-22034] [WARN] Appending source destination directory /root/codeqlAI/storage/33092db5-88a7-49b8-95ea-db60530e9a09/source/target/generated-sources/annotations to sourcepath
+[2026-03-02 08:36:22] [javac-extractor-22034] Annotation processor class 'lombok.launch.AnnotationProcessorHider$AnnotationProcessor' initialized.
+[2026-03-02 08:36:22] [javac-extractor-22034] Annotation processor class 'lombok.launch.AnnotationProcessorHider$ClaimingProcessor' initialized.
+[2026-03-02 08:36:22] [javac-extractor-22034] 4 files will be passed to the attrib/flow phase
+[2026-03-02 08:36:22] [javac-extractor-22034] Processing file /root/codeqlAI/storage/33092db5-88a7-49b8-95ea-db60530e9a09/source/src/main/java/com/demo/Application.java
+[2026-03-02 08:36:26] [javac-extractor-22034] Processing JAR file: /root/.m2/repository/org/springframework/boot/spring-boot/2.7.0/spring-boot-2.7.0.jar
+[2026-03-02 08:36:26] [javac-extractor-22034] Processing JAR file: /root/.m2/repository/org/springframework/spring-context/5.3.20/spring-context-5.3.20.jar
+[2026-03-02 08:36:26] [javac-extractor-22034] Processing JAR file: /root/.m2/repository/org/springframework/boot/spring-boot-autoconfigure/2.7.0/spring-boot-autoconfigure-2.7.0.jar
+[2026-03-02 08:36:26] [javac-extractor-22034] Processing JAR file: /root/.m2/repository/org/springframework/spring-core/5.3.20/spring-core-5.3.20.jar
+[2026-03-02 08:36:26] [javac-extractor-22034] Processing JAR file: /root/.m2/repository/org/springframework/spring-beans/5.3.20/spring-beans-5.3.20.jar
+[2026-03-02 08:36:26] [javac-extractor-22034] Processing JAR file: /root/.m2/repository/org/springframework/spring-jcl/5.3.20/spring-jcl-5.3.20.jar
+[2026-03-02 08:36:26] [javac-extractor-22034] Processing file /root/codeqlAI/storage/33092db5-88a7-49b8-95ea-db60530e9a09/source/src/main/java/com/demo/service/UserService.java
+[2026-03-02 08:36:26] [javac-extractor-22034] Processing JAR file: /root/.m2/repository/org/springframework/spring-jdbc/5.3.20/spring-jdbc-5.3.20.jar
+[2026-03-02 08:36:26] [javac-extractor-22034] Processing JAR file: /root/.m2/repository/org/springframework/spring-tx/5.3.20/spring-tx-5.3.20.jar
+[2026-03-02 08:36:26] [javac-extractor-22034] Processing file /root/codeqlAI/storage/33092db5-88a7-49b8-95ea-db60530e9a09/source/src/main/java/com/demo/controller/FileController.java
+[2026-03-02 08:36:26] [javac-extractor-22034] Processing JAR file: /root/.m2/repository/org/springframework/spring-web/5.3.20/spring-web-5.3.20.jar
+[2026-03-02 08:36:27] [javac-extractor-22034] Processing file /root/codeqlAI/storage/33092db5-88a7-49b8-95ea-db60530e9a09/source/src/main/java/com/demo/controller/UserController.java
+[2026-03-02 08:36:27] [javac-extractor-22034] Processing JAR file: /root/.m2/repository/org/apache/tomcat/embed/tomcat-embed-core/9.0.63/tomcat-embed-core-9.0.63.jar
+[2026-03-02 08:36:27] [javac-extractor-22034] Javac init time: 1.7s
+[2026-03-02 08:36:27] [javac-extractor-22034] Javac attr time: 0.2s
+[2026-03-02 08:36:27] [javac-extractor-22034] Extractor time: 4.5s
+[2026-03-02 08:36:27] [javac-extractor-22034] Other time: 0.3s
+[2026-03-02 08:36:27] [javac-extractor-22034] Total time: 6.6s
