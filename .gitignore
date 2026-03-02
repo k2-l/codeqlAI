@@ -1,0 +1,24 @@
+# IDE配置文件（如果使用IDEA/Eclipse）
+.idea/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+bin/
+
+# 日志文件
+*.log
+
+# 临时文件
+*.tmp
+*.bak
+
+# OS临时文件
+.DS_Store
+Thumbs.db
+
+
+# 分析文件
+storage/*
