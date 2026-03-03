@@ -91,7 +91,26 @@ export interface FindingsResponse {
   items:   Finding[]
 }
 
-// ===== 仪表盘统计 =====
+// ===== 系统设置 =====
+export interface AISettings {
+  provider:    string
+  base_url:    string
+  api_key:     string  // 脱敏值
+  model:       string
+  max_tokens:  number
+  timeout_sec: number
+  rate_limit:  number
+}
+
+export interface UpdateAISettingsRequest {
+  provider:    string
+  base_url:    string
+  api_key?:    string
+  model:       string
+  max_tokens:  number
+  timeout_sec: number
+  rate_limit:  number
+}
 export interface DashboardStats {
   total_tasks:     number
   completed_tasks: number
@@ -101,4 +120,53 @@ export interface DashboardStats {
   high_findings:   number
   audited_findings: number
   exploitable_findings: number
+}
+
+// ===== 自定义规则 =====
+export interface CustomRule {
+  id:          string
+  name:        string
+  description: string
+  language:    Language
+  content:     string
+  file_path:   string
+  is_enabled:  boolean
+  created_at:  string
+  updated_at:  string
+}
+
+export interface CreateRuleRequest {
+  name:        string
+  description?: string
+  language:    Language
+  content:     string
+}
+
+export interface UpdateRuleRequest {
+  name?:        string
+  description?: string
+  content?:     string
+  is_enabled?:  boolean
+}
+
+// ===== 漏洞地图 =====
+export interface FlowNode {
+  index:     number
+  file_path: string
+  line:      number
+  column:    number
+  message:   string
+}
+
+export interface FlowPath {
+  nodes: FlowNode[]
+}
+
+export interface FindingFlow {
+  rule_id:   string
+  message:   string
+  severity:  Severity
+  file_path: string
+  line:      number
+  flows:     FlowPath[]
 }

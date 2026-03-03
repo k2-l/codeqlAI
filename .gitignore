@@ -8,6 +8,9 @@
 .settings/
 bin/
 
+# 分析文件
+storage/
+
 # 日志文件
 *.log
 
@@ -20,5 +23,4 @@ bin/
 Thumbs.db
 
 
-# 分析文件
-storage/*
+

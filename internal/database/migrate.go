@@ -30,7 +30,7 @@ func NewDB(cfg Config) (*gorm.DB, error) {
 	)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Warn),
+		Logger: logger.Default.LogMode(logger.Silent),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
@@ -48,7 +48,8 @@ func Migrate(db *gorm.DB) error {
 		&model.Project{},   // 无外键依赖，最先建
 		&model.Task{},      // 依赖 projects
 		&model.Finding{},   // 依赖 tasks
-		&model.AiResult{},  // 依赖 findings，最后建
+		&model.AiResult{},  // 依赖 findings，最后建model.AiResult{},  // 依赖 findings
+		&model.CustomRule{}, // 独立表，无外键
 	)
 	if err != nil {
 		return fmt.Errorf("migration failed: %w", err)

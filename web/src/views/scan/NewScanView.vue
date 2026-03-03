@@ -95,6 +95,51 @@
             </el-form-item>
           </template>
 
+          <!-- 自定义规则选择 -->
+          <el-form-item label="扫描规则">
+            <div class="rule-selector">
+              <button
+                type="button"
+                class="toggle-btn"
+                :class="{ active: !form.custom_rule_id }"
+                @click="form.custom_rule_id = ''"
+              >
+                <el-icon><Star /></el-icon>
+                官方规则套件
+              </button>
+              <button
+                type="button"
+                class="toggle-btn"
+                :class="{ active: !!form.custom_rule_id || showRuleList }"
+                @click="showRuleList = !showRuleList; if(!showRuleList) form.custom_rule_id = ''"
+              >
+                <el-icon><Edit /></el-icon>
+                自定义规则
+              </button>
+            </div>
+            <transition name="slide-down">
+              <el-select
+                v-if="showRuleList"
+                v-model="form.custom_rule_id"
+                placeholder="选择已保存的自定义规则"
+                style="width:100%; margin-top: 8px"
+                clearable
+              >
+                <el-option
+                  v-for="rule in availableRules"
+                  :key="rule.id"
+                  :value="rule.id"
+                  :label="rule.name"
+                >
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span style="font-size:10px;color:var(--accent-primary);font-family:var(--font-mono)">{{ rule.language }}</span>
+                    <span>{{ rule.name }}</span>
+                  </div>
+                </el-option>
+              </el-select>
+            </transition>
+          </el-form-item>
+
           <!-- 提交按钮 -->
           <el-form-item style="margin-top: 8px;">
             <button
@@ -165,13 +210,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { useTaskStore } from '@/stores'
 import * as api from '@/api'
-import type { Language } from '@/api/types'
+import type { Language, CustomRule } from '@/api/types'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -180,16 +225,19 @@ const taskStore = useTaskStore()
 const formRef = ref<FormInstance>()
 const submitting = ref(false)
 const sourceType = ref<'local' | 'git'>('git')
+const showRuleList = ref(false)
+const availableRules = ref<CustomRule[]>([])
 
 const form = reactive({
-  project_name: '',
-  task_name:    '',
-  language:     'java' as Language,
-  source_path:  '',
-  git_url:      '',
-  git_branch:   '',
-  git_token:    '',
-  git_ssh_key:  '',
+  project_name:   '',
+  task_name:      '',
+  language:       'java' as Language,
+  source_path:    '',
+  git_url:        '',
+  git_branch:     '',
+  git_token:      '',
+  git_ssh_key:    '',
+  custom_rule_id: '',
 })
 
 const languages = [
@@ -232,6 +280,7 @@ async function handleSubmit() {
       req.git_token  = form.git_token  || undefined
       req.git_ssh_key = form.git_ssh_key || undefined
     }
+    if (form.custom_rule_id) req.custom_rule_id = form.custom_rule_id
 
     const res = await api.submitScan(req)
     ElMessage.success(`${t('newScan.success')}: ${res.display_name}`)
@@ -246,6 +295,11 @@ async function handleSubmit() {
     submitting.value = false
   }
 }
+
+onMounted(async () => {
+  const res = await api.listRules()
+  availableRules.value = res.items.filter((r: any) => r.is_enabled)
+})
 </script>
 
 <style scoped>

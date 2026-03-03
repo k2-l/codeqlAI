@@ -24,6 +24,9 @@ type CodeQLScanPayload struct {
 	GitBranch string `json:"git_branch"`
 	GitToken  string `json:"git_token"`
 	GitSSHKey string `json:"git_ssh_key"`
+
+	// 自定义规则（留空则用官方套件）
+	CustomRuleID string `json:"custom_rule_id"`
 }
 
 // IsGitSource 判断是否为 Git 来源

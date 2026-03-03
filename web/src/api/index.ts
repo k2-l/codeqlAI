@@ -45,3 +45,33 @@ export const triggerAudit = (findingId: string) =>
 // ===== Health =====
 export const checkHealth = () =>
   axios.get<{ status: string }>('/health').then(r => r.data)
+
+// ===== Settings =====
+export const getAISettings = () =>
+  http.get<AISettings>('/settings/ai').then(r => r.data)
+
+export const updateAISettings = (data: UpdateAISettingsRequest) =>
+  http.put<{ message: string }>('/settings/ai', data).then(r => r.data)
+
+// ===== Custom Rules =====
+export const listRules = (language?: string) =>
+  http.get<{ total: number; items: any[] }>('/rules', { params: language ? { language } : {} }).then(r => r.data)
+
+export const getRule = (id: string) =>
+  http.get<any>(`/rules/${id}`).then(r => r.data)
+
+export const createRule = (data: any) =>
+  http.post<any>('/rules', data).then(r => r.data)
+
+export const updateRule = (id: string, data: any) =>
+  http.put<any>(`/rules/${id}`, data).then(r => r.data)
+
+export const deleteRule = (id: string) =>
+  http.delete(`/rules/${id}`).then(r => r.data)
+
+// ===== VulnMap =====
+export const getVulnMap = (taskId: string) =>
+  http.get<{ task_id: string; total: number; items: any[] }>(`/task/${taskId}/vulnmap`).then(r => r.data)
+
+export const listTasks = (status?: string) =>
+  http.get<{ total: number; items: any[] }>('/tasks', { params: status ? { status } : {} }).then(r => r.data)

@@ -1,34 +1,30 @@
-app:
-  name: ql-scanner-ai
-  port: 8080
-  debug: true
-
-database:
-  host: localhost
-  port: 5432
-  user: scanner
-  password: scanner123
-  dbname: ql_scanner
-  sslmode: disable
-  timezone: Asia/Shanghai
-
-redis:
-  addr: localhost:6379
-  password: ""
-  db: 0
-
-codeql:
-  binary_path: ""           # 留空则自动从系统 PATH 查找
-  query_suite: "security-and-quality"  # 对应 java-security-and-quality.qls，覆盖安全+质量规则
-  threads: 4
-  timeout_minute: 30
-  storage_path: "./storage"
-
 ai:
-  provider: openai-compatible
-  base_url: "https://api.qnaigc.com/v1"
-  api_key: "sk-d3337e5e336462be89afeb8c2dac4d6d37454229de01a737ec316d45a64c6ef4"
-  model: "z-ai/glm-4.7"
-  max_tokens: 2048
-  timeout_sec: 240
-  rate_limit: 10            # 每分钟最多 10 次 AI 请求
+    api_key: sk-d3337e5e336462be89afeb8c2dac4d6d37454229de01a737ec316d45a64c6ef4
+    base_url: https://api.qnaigc.com/v1
+    max_tokens: 2048
+    model: z-ai/glm-4.7
+    provider: QiNiuYun
+    rate_limit: 10
+    timeout_sec: 240
+app:
+    debug: true
+    name: ql-scanner-ai
+    port: 8080
+codeql:
+    binary_path: ""
+    query_suite: security-and-quality
+    storage_path: ./storage
+    threads: 4
+    timeout_minute: 30
+database:
+    dbname: ql_scanner
+    host: localhost
+    password: scanner123
+    port: 5432
+    sslmode: disable
+    timezone: Asia/Shanghai
+    user: scanner
+redis:
+    addr: localhost:6379
+    db: 0
+    password: ""

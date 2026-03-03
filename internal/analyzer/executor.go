@@ -129,9 +129,8 @@ func (e *Executor) CreateDatabase(taskID string, language string, sourceRoot str
 }
 
 // RunAnalysis 调用 codeql database analyze 运行查询并输出 SARIF
-// taskID: 任务 ID
-// language: 扫描语言（用于选择对应的查询套件）
-func (e *Executor) RunAnalysis(taskID string, language string) error {
+// customQLPath: 自定义 .ql 文件路径，为空则使用官方查询套件
+func (e *Executor) RunAnalysis(taskID string, language string, customQLPath string) error {
 	if err := validateLanguage(language); err != nil {
 		return err
 	}
@@ -139,9 +138,14 @@ func (e *Executor) RunAnalysis(taskID string, language string) error {
 	dbPath := e.DBPath(taskID)
 	sarifPath := e.SarifPath(taskID)
 
-	// 根据语言选择对应的官方查询套件
-	// 格式：codeql/{language}-queries:codeql-suites/{language}-{suite}.qls
-	querySuite := fmt.Sprintf("codeql/%s-queries:codeql-suites/%s-%s.qls", language, language, e.querySuite)
+	// 决定使用官方套件还是自定义 QL 文件
+	var queryTarget string
+	if customQLPath != "" {
+		queryTarget = customQLPath
+		logger.Info("using custom QL rule", zap.String("task_id", taskID), zap.String("ql_path", customQLPath))
+	} else {
+		queryTarget = fmt.Sprintf("codeql/%s-queries:codeql-suites/%s-%s.qls", language, language, e.querySuite)
+	}
 
 	timeout := time.Duration(e.timeoutMinute) * time.Minute
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -150,7 +154,7 @@ func (e *Executor) RunAnalysis(taskID string, language string) error {
 	args := []string{
 		"database", "analyze",
 		dbPath,
-		querySuite,
+		queryTarget,
 		"--format=sarif-latest",
 		"--output=" + sarifPath,
 		"--threads=" + fmt.Sprintf("%d", e.threads),
@@ -158,7 +162,7 @@ func (e *Executor) RunAnalysis(taskID string, language string) error {
 
 	logger.Info("running CodeQL analysis",
 		zap.String("task_id", taskID),
-		zap.String("query_suite", querySuite),
+		zap.String("query_suite", queryTarget),
 		zap.String("sarif_path", sarifPath),
 	)
 

@@ -92,9 +92,12 @@ const route = useRoute()
 const appStore = useAppStore()
 
 const navItems = [
-  { to: '/dashboard', label: 'nav.dashboard', icon: 'DataBoard' },
-  { to: '/tasks',     label: 'nav.tasks',     icon: 'List' },
-  { to: '/new-scan',  label: 'nav.newScan',   icon: 'CirclePlus' },
+  { to: '/dashboard', label: 'nav.dashboard', icon: 'DataBoard'   },
+  { to: '/tasks',     label: 'nav.tasks',     icon: 'List'        },
+  { to: '/new-scan',  label: 'nav.newScan',   icon: 'CirclePlus'  },
+  { to: '/vulnmap',   label: 'nav.vulnMap',   icon: 'Share'       },
+  { to: '/rules',     label: 'nav.rules',     icon: 'Edit'        },
+  { to: '/settings',  label: 'nav.settings',  icon: 'Setting'     },
 ]
 
 const isActive = (path: string) => route.path === path || route.path.startsWith(path + '/')
@@ -103,6 +106,9 @@ const currentPageTitle = computed(() => {
   if (route.path.startsWith('/dashboard')) return t('nav.dashboard')
   if (route.path.startsWith('/tasks'))     return t('nav.tasks')
   if (route.path.startsWith('/new-scan'))  return t('nav.newScan')
+  if (route.path.startsWith('/vulnmap'))   return t('nav.vulnMap')
+  if (route.path.startsWith('/rules'))     return t('nav.rules')
+  if (route.path.startsWith('/settings'))  return t('nav.settings')
   return ''
 })
 

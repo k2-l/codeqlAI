@@ -178,3 +178,23 @@ func (a *AiResult) BeforeCreate(tx *gorm.DB) error {
 	}
 	return nil
 }
+
+// CustomRule 用户自定义 QL 扫描规则
+type CustomRule struct {
+	ID          uuid.UUID `gorm:"type:uuid;primaryKey"         json:"id"`
+	Name        string    `gorm:"type:varchar(100);not null"   json:"name"`
+	Description string    `gorm:"type:text"                    json:"description"`
+	Language    Language  `gorm:"type:varchar(20);not null;index" json:"language"`
+	Content     string    `gorm:"type:text;not null"           json:"content"`   // QL 查询内容
+	FilePath    string    `gorm:"type:varchar(500)"            json:"file_path"` // 写入磁盘的路径
+	IsEnabled   bool      `gorm:"default:true"                 json:"is_enabled"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+func (r *CustomRule) BeforeCreate(tx *gorm.DB) error {
+	if r.ID == uuid.Nil {
+		r.ID = uuid.New()
+	}
+	return nil
+}

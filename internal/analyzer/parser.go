@@ -69,8 +69,46 @@ type sarifArtifactLocation struct {
 }
 
 type sarifRegion struct {
-	StartLine int `json:"startLine"`
-	EndLine   int `json:"endLine"`
+	StartLine   int `json:"startLine"`
+	EndLine     int `json:"endLine"`
+	StartColumn int `json:"startColumn"`
+}
+
+// ===== codeFlows 扩展结构（用于漏洞地图） =====
+
+// sarifReportFull 扩展版本，包含 codeFlows
+type sarifReportFull struct {
+	Runs []sarifRunFull `json:"runs"`
+}
+
+type sarifRunFull struct {
+	Tool    sarifTool         `json:"tool"`
+	Results []sarifResultFull `json:"results"`
+}
+
+type sarifResultFull struct {
+	RuleID    string             `json:"ruleId"`
+	Level     string             `json:"level"`
+	Message   sarifMessage       `json:"message"`
+	Locations []sarifLocation    `json:"locations"`
+	CodeFlows []sarifCodeFlow    `json:"codeFlows"`
+}
+
+type sarifCodeFlow struct {
+	ThreadFlows []sarifThreadFlow `json:"threadFlows"`
+}
+
+type sarifThreadFlow struct {
+	Locations []sarifThreadFlowLocation `json:"locations"`
+}
+
+type sarifThreadFlowLocation struct {
+	Location sarifFlowLocation `json:"location"`
+}
+
+type sarifFlowLocation struct {
+	PhysicalLocation sarifPhysicalLocation `json:"physicalLocation"`
+	Message          sarifMessage          `json:"message"`
 }
 
 // ===== 解析器 =====

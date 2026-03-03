@@ -19,17 +19,24 @@ import (
 
 // Processor 任务处理器，持有所有依赖
 type Processor struct {
-	db       *gorm.DB
-	executor *analyzer.Executor
-	auditor  *auditor.Auditor
+	db          *gorm.DB
+	executor    *analyzer.Executor
+	auditor     *auditor.Auditor
+	ruleService ruleServiceIface
+}
+
+// ruleServiceIface 用接口解耦，避免循环依赖
+type ruleServiceIface interface {
+	GetRuleFilePath(id uuid.UUID) (string, error)
 }
 
 // NewProcessor 初始化任务处理器
-func NewProcessor(db *gorm.DB, executor *analyzer.Executor, auditor *auditor.Auditor) *Processor {
+func NewProcessor(db *gorm.DB, executor *analyzer.Executor, auditor *auditor.Auditor, ruleService ruleServiceIface) *Processor {
 	return &Processor{
-		db:       db,
-		executor: executor,
-		auditor:  auditor,
+		db:          db,
+		executor:    executor,
+		auditor:     auditor,
+		ruleService: ruleService,
 	}
 }
 
@@ -97,7 +104,20 @@ func (p *Processor) HandleCodeQLScan(ctx context.Context, t *asynq.Task) error {
 	p.updateTaskStatus(taskID, model.TaskStatusAnalyzing, "")
 	log.Info("step 2/3: running CodeQL analysis")
 
-	if err := p.executor.RunAnalysis(payload.TaskID, payload.Language); err != nil {
+	// 解析自定义规则路径（留空则使用官方套件）
+	customQLPath := ""
+	if payload.CustomRuleID != "" {
+		ruleID, err := uuid.Parse(payload.CustomRuleID)
+		if err != nil {
+			return p.failTask(taskID, fmt.Errorf("invalid custom_rule_id: %w", err))
+		}
+		customQLPath, err = p.ruleService.GetRuleFilePath(ruleID)
+		if err != nil {
+			return p.failTask(taskID, fmt.Errorf("failed to get custom rule file: %w", err))
+		}
+	}
+
+	if err := p.executor.RunAnalysis(payload.TaskID, payload.Language, customQLPath); err != nil {
 		return p.failTask(taskID, fmt.Errorf("RunAnalysis failed: %w", err))
 	}
 	sarifPath := p.executor.SarifPath(payload.TaskID)
