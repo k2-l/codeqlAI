@@ -10,10 +10,18 @@ import (
 
 type Config struct {
 	App      AppConfig      `yaml:"app"`
+	Auth     AuthConfig     `yaml:"auth"`
 	Database DatabaseConfig `yaml:"database"`
 	Redis    RedisConfig    `yaml:"redis"`
 	CodeQL   CodeQLConfig   `yaml:"codeql"`
 	AI       AIConfig       `yaml:"ai"`
+}
+
+type AuthConfig struct {
+	Username  string `yaml:"username"`
+	Password  string `yaml:"password"`
+	JWTSecret string `yaml:"jwt_secret"`
+	TokenTTLH int    `yaml:"token_ttl_hours"` // Token 有效期（小时），默认 24
 }
 
 type AppConfig struct {

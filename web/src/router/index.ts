@@ -4,6 +4,12 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
+      path: '/login',
+      name: 'Login',
+      component: () => import('@/views/auth/LoginView.vue'),
+      meta: { public: true },
+    },
+    {
       path: '/',
       component: () => import('@/layouts/MainLayout.vue'),
       redirect: '/dashboard',
@@ -18,6 +24,18 @@ const router = createRouter({
       ],
     },
   ],
+})
+
+// 路由守卫：未登录跳转到 /login
+router.beforeEach((to, _from, next) => {
+  const token = localStorage.getItem('token')
+  if (to.meta.public) {
+    // 已登录访问登录页，直接进主界面
+    if (token) return next('/')
+    return next()
+  }
+  if (!token) return next('/login')
+  next()
 })
 
 export default router

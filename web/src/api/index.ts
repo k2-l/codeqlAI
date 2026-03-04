@@ -10,15 +10,43 @@ const http = axios.create({
   timeout: 30000,
 })
 
-// 响应拦截器：统一错误处理
+// 请求拦截器：自动携带 JWT Token
+http.interceptors.request.use(config => {
+  const token = localStorage.getItem('token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// 响应拦截器：401 清 token 跳登录，其他错误统一提示
 http.interceptors.response.use(
   res => res,
   err => {
+    if (err.response?.status === 401) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('username')
+      // 跳转登录页（避免循环依赖不直接 import router）
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login'
+      }
+      return Promise.reject(err)
+    }
     const msg = err.response?.data?.error || err.message || 'Network Error'
     ElMessage.error(msg)
     return Promise.reject(err)
   }
 )
+
+// ===== Auth =====
+export const getCaptcha = () =>
+  http.get<{ captcha_id: string; captcha_code: string }>('/auth/captcha').then(r => r.data)
+
+export const login = (data: { username: string; password: string; captcha_id: string; captcha_code: string }) =>
+  http.post<{ token: string; expires_at: number; username: string }>('/auth/login', data).then(r => r.data)
+
+export const logout = () =>
+  http.post('/auth/logout').then(r => r.data)
 
 // ===== Scan =====
 export const submitScan = (data: SubmitScanRequest) =>
@@ -42,15 +70,11 @@ export const getFindings = (taskId: string) =>
 export const triggerAudit = (findingId: string) =>
   http.post<{ message: string; finding_id: string }>(`/finding/${findingId}/audit`).then(r => r.data)
 
-// ===== Health =====
-export const checkHealth = () =>
-  axios.get<{ status: string }>('/health').then(r => r.data)
-
 // ===== Settings =====
 export const getAISettings = () =>
-  http.get<AISettings>('/settings/ai').then(r => r.data)
+  http.get<any>('/settings/ai').then(r => r.data)
 
-export const updateAISettings = (data: UpdateAISettingsRequest) =>
+export const updateAISettings = (data: any) =>
   http.put<{ message: string }>('/settings/ai', data).then(r => r.data)
 
 // ===== Custom Rules =====
@@ -75,3 +99,8 @@ export const getVulnMap = (taskId: string) =>
 
 export const listTasks = (status?: string) =>
   http.get<{ total: number; items: any[] }>('/tasks', { params: status ? { status } : {} }).then(r => r.data)
+
+// ===== Health =====
+export const checkHealth = () =>
+  axios.get<{ status: string }>('/health').then(r => r.data)
+

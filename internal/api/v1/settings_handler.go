@@ -18,7 +18,7 @@ func NewSettingsHandler(settingsService *service.AISettingsService) *SettingsHan
 }
 
 // RegisterSettingsRoutes 注册设置路由
-func (h *SettingsHandler) RegisterSettingsRoutes(rg *gin.RouterGroup) {
+func (h *SettingsHandler) RegisterSettingsRoutes(rg gin.IRoutes) {
 	rg.GET("/settings/ai", h.GetAISettings)
 	rg.PUT("/settings/ai", h.UpdateAISettings)
 }

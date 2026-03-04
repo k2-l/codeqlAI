@@ -19,7 +19,7 @@ func NewHandler(scanService *service.ScanService) *Handler {
 }
 
 // RegisterRoutes 注册所有 v1 路由
-func (h *Handler) RegisterRoutes(rg *gin.RouterGroup) {
+func (h *Handler) RegisterRoutes(rg gin.IRoutes) {
 	rg.POST("/scan", h.SubmitScan)
 	rg.GET("/task/:id", h.GetTask)
 	rg.GET("/task/:id/results", h.GetFindings)

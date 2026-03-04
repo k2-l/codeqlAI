@@ -17,7 +17,7 @@ func NewRuleHandler(svc *service.CustomRuleService) *RuleHandler {
 	return &RuleHandler{ruleService: svc}
 }
 
-func (h *RuleHandler) RegisterRoutes(rg *gin.RouterGroup) {
+func (h *RuleHandler) RegisterRoutes(rg gin.IRoutes) {
 	rg.POST("/rules", h.CreateRule)
 	rg.GET("/rules", h.ListRules)
 	rg.GET("/rules/:id", h.GetRule)

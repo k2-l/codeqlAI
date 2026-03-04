@@ -9,6 +9,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const maskedKeyPlaceholder = "****"
+
 // AISettingsService 负责读写 AI 配置
 type AISettingsService struct {
 	configPath string
@@ -76,7 +78,7 @@ func (s *AISettingsService) UpdateAISettings(req UpdateAISettingsRequest) error 
 	// 3. 取出现有 ai 节点
 	aiSection, _ := rawCfg["ai"].(map[string]interface{})
 	if aiSection == nil {
-		aiSection = map[string]interface{}{}
+		aiSection = make(map[string]interface{})
 	}
 
 	// 4. 只更新允许修改的字段
@@ -84,8 +86,8 @@ func (s *AISettingsService) UpdateAISettings(req UpdateAISettingsRequest) error 
 	aiSection["base_url"] = req.BaseURL
 	aiSection["model"] = req.Model
 
-	// API Key：空字符串表示不修改，保留原有值
-	if req.APIKey != "" && !isMasked(req.APIKey) {
+	// API Key：空字符串或脱敏值表示不修改
+	if req.APIKey != "" && !strings.Contains(req.APIKey, "*") {
 		aiSection["api_key"] = req.APIKey
 	}
 
@@ -107,13 +109,13 @@ func (s *AISettingsService) UpdateAISettings(req UpdateAISettingsRequest) error 
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	// 6. 原子写入（先写临时文件，再 rename，防止写到一半崩溃）
+	// 6. 原子写入（先写临时文件，再 rename）
 	tmpPath := s.configPath + ".tmp"
 	if err := os.WriteFile(tmpPath, out, 0644); err != nil {
 		return fmt.Errorf("failed to write temp config: %w", err)
 	}
 	if err := os.Rename(tmpPath, s.configPath); err != nil {
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath) // 忽略清理错误
 		return fmt.Errorf("failed to replace config file: %w", err)
 	}
 
@@ -123,12 +125,14 @@ func (s *AISettingsService) UpdateAISettings(req UpdateAISettingsRequest) error 
 // maskAPIKey 脱敏 API Key，只显示前4位
 func maskAPIKey(key string) string {
 	if len(key) <= 4 {
-		return "****"
+		return maskedKeyPlaceholder
 	}
-	return key[:4] + strings.Repeat("*", len(key)-4)
-}
-
-// isMasked 判断前端传回的 key 是否是脱敏值（含 *），是则不更新
-func isMasked(key string) bool {
-	return strings.Contains(key, "*")
+	// 直接构造结果，避免 strings.Repeat 分配
+	var sb strings.Builder
+	sb.Grow(len(key))
+	sb.WriteString(key[:4])
+	for i := 4; i < len(key); i++ {
+		sb.WriteByte('*')
+	}
+	return sb.String()
 }

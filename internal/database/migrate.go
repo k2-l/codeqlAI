@@ -45,10 +45,10 @@ func Migrate(db *gorm.DB) error {
 	log.Println("[Migration] Starting database migration...")
 
 	err := db.AutoMigrate(
-		&model.Project{},   // 无外键依赖，最先建
-		&model.Task{},      // 依赖 projects
-		&model.Finding{},   // 依赖 tasks
-		&model.AiResult{},  // 依赖 findings，最后建model.AiResult{},  // 依赖 findings
+		&model.Project{},    // 无外键依赖，最先建
+		&model.Task{},       // 依赖 projects
+		&model.Finding{},    // 依赖 tasks
+		&model.AiResult{},   // 依赖 findings
 		&model.CustomRule{}, // 独立表，无外键
 	)
 	if err != nil {

@@ -35,9 +35,9 @@ type sarifDriver struct {
 }
 
 type sarifRule struct {
-	ID                   string              `json:"id"`
-	ShortDescription     sarifMessage        `json:"shortDescription"`
-	DefaultConfiguration sarifConfiguration  `json:"defaultConfiguration"`
+	ID                   string             `json:"id"`
+	ShortDescription     sarifMessage       `json:"shortDescription"`
+	DefaultConfiguration sarifConfiguration `json:"defaultConfiguration"`
 }
 
 type sarifConfiguration struct {
@@ -126,7 +126,6 @@ func ParseSarif(taskID uuid.UUID, sarifPath string, sourceRoot string) ([]model.
 		zap.String("sarif_path", sarifPath),
 	)
 
-	// 读取并解析 SARIF JSON
 	data, err := os.ReadFile(sarifPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read sarif file: %w", err)
@@ -137,15 +136,19 @@ func ParseSarif(taskID uuid.UUID, sarifPath string, sourceRoot string) ([]model.
 		return nil, fmt.Errorf("failed to parse sarif json: %w", err)
 	}
 
-	// 构建 ruleID -> severity 映射表（从 tool.driver.rules 提取）
 	severityMap := buildSeverityMap(report)
 
-	var findings []model.Finding
+	// 预估 findings 数量以预分配切片容量
+	estimatedFindings := 0
+	for _, run := range report.Runs {
+		estimatedFindings += len(run.Results)
+	}
+	findings := make([]model.Finding, 0, estimatedFindings)
 
 	for _, run := range report.Runs {
 		for _, result := range run.Results {
 			if len(result.Locations) == 0 {
-				continue // 没有位置信息的结果跳过
+				continue
 			}
 
 			loc := result.Locations[0].PhysicalLocation
@@ -153,12 +156,10 @@ func ParseSarif(taskID uuid.UUID, sarifPath string, sourceRoot string) ([]model.
 			startLine := loc.Region.StartLine
 			endLine := loc.Region.EndLine
 
-			// endLine 有时候不存在，默认等于 startLine
 			if endLine == 0 {
 				endLine = startLine
 			}
 
-			// 读取代码片段（含上下文）
 			snippet, err := extractCodeSnippet(
 				filepath.Join(sourceRoot, filePath),
 				startLine,
@@ -166,7 +167,6 @@ func ParseSarif(taskID uuid.UUID, sarifPath string, sourceRoot string) ([]model.
 				contextLines,
 			)
 			if err != nil {
-				// 读取失败不中断整体解析，记录警告继续处理
 				logger.Warn("failed to extract code snippet",
 					zap.String("file", filePath),
 					zap.Int("line", startLine),
@@ -175,7 +175,7 @@ func ParseSarif(taskID uuid.UUID, sarifPath string, sourceRoot string) ([]model.
 				snippet = "[code snippet unavailable]"
 			}
 
-			finding := model.Finding{
+			findings = append(findings, model.Finding{
 				ID:          uuid.New(),
 				TaskID:      taskID,
 				RuleID:      result.RuleID,
@@ -187,9 +187,7 @@ func ParseSarif(taskID uuid.UUID, sarifPath string, sourceRoot string) ([]model.
 				CodeSnippet: snippet,
 				AuditStatus: model.AuditStatusPending,
 				IsIgnored:   false,
-			}
-
-			findings = append(findings, finding)
+			})
 		}
 	}
 
@@ -216,7 +214,11 @@ func extractCodeSnippet(filePath string, startLine, endLine, context int) (strin
 	}
 	to := endLine + context
 
-	var lines []string
+	// 预计算行数，预分配 strings.Builder 容量
+	lineCount := to - from + 1
+	var builder strings.Builder
+	builder.Grow(lineCount * 80) // 假设平均每行约 80 字符
+
 	scanner := bufio.NewScanner(f)
 	lineNum := 0
 
@@ -230,24 +232,61 @@ func extractCodeSnippet(filePath string, startLine, endLine, context int) (strin
 		}
 
 		// 标记漏洞核心行，方便 AI 识别重点
-		prefix := "    "
 		if lineNum >= startLine && lineNum <= endLine {
-			prefix = ">>> " // 漏洞所在行加箭头标记
+			builder.WriteString(">>> ")
+		} else {
+			builder.WriteString("    ")
 		}
 
-		lines = append(lines, fmt.Sprintf("%s%4d | %s", prefix, lineNum, scanner.Text()))
+		// 手动格式化行号，避免 fmt.Sprintf 开销
+		writePaddedLineNum(&builder, lineNum)
+		builder.WriteString(" | ")
+		builder.WriteString(scanner.Text())
+		builder.WriteByte('\n')
 	}
 
 	if err := scanner.Err(); err != nil {
 		return "", fmt.Errorf("error reading file %s: %w", filePath, err)
 	}
 
-	return strings.Join(lines, "\n"), nil
+	result := builder.String()
+	// 移除末尾多余的换行符
+	if len(result) > 0 && result[len(result)-1] == '\n' {
+		result = result[:len(result)-1]
+	}
+	return result, nil
+}
+
+// writePaddedLineNum 写入带前导空格填充的行号（4字符宽度）
+func writePaddedLineNum(b *strings.Builder, n int) {
+	switch {
+	case n >= 10000:
+		b.WriteString(fmt.Sprintf("%4d", n))
+	case n >= 1000:
+		b.WriteByte(' ')
+		b.WriteString(fmt.Sprintf("%d", n))
+	case n >= 100:
+		b.WriteString("  ")
+		b.WriteString(fmt.Sprintf("%d", n))
+	case n >= 10:
+		b.WriteString("   ")
+		b.WriteByte(byte('0' + n/10))
+		b.WriteByte(byte('0' + n%10))
+	default:
+		b.WriteString("    ")
+		b.WriteByte(byte('0' + n))
+	}
 }
 
 // buildSeverityMap 从 SARIF rules 中提取 ruleID -> level 映射
 func buildSeverityMap(report sarifReport) map[string]string {
-	m := make(map[string]string)
+	// 预估容量
+	totalRules := 0
+	for _, run := range report.Runs {
+		totalRules += len(run.Tool.Driver.Rules)
+	}
+	m := make(map[string]string, totalRules)
+
 	for _, run := range report.Runs {
 		for _, rule := range run.Tool.Driver.Rules {
 			m[rule.ID] = rule.DefaultConfiguration.Level
@@ -258,12 +297,13 @@ func buildSeverityMap(report sarifReport) map[string]string {
 
 // mapSeverity 将 SARIF level 映射为项目内部的 Severity 枚举
 func mapSeverity(level string) model.Severity {
-	switch strings.ToLower(level) {
-	case "error":
+	// 直接比较，避免 strings.ToLower 开销
+	switch level {
+	case "error", "Error", "ERROR":
 		return model.SeverityHigh
-	case "warning":
+	case "warning", "Warning", "WARNING":
 		return model.SeverityMedium
-	case "note":
+	case "note", "Note", "NOTE":
 		return model.SeverityNote
 	default:
 		return model.SeverityLow

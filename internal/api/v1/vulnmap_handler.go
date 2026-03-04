@@ -18,7 +18,7 @@ func NewVulnMapHandler(db *gorm.DB) *VulnMapHandler {
 	return &VulnMapHandler{db: db}
 }
 
-func (h *VulnMapHandler) RegisterRoutes(rg *gin.RouterGroup) {
+func (h *VulnMapHandler) RegisterRoutes(rg gin.IRoutes) {
 	rg.GET("/task/:id/vulnmap", h.GetVulnMap)
 	rg.GET("/tasks", h.ListTasks) // 任务列表（仪表盘 + 漏洞地图选择器用）
 }

@@ -56,6 +56,11 @@
           </div>
         </div>
         <div class="topbar-right">
+          <!-- 当前用户 -->
+          <span class="topbar-user font-mono">
+            <el-icon><UserFilled /></el-icon>
+            {{ username }}
+          </span>
           <!-- 语言切换 -->
           <button class="topbar-btn lang-btn" @click="toggleLocale">
             <el-icon><Translate /></el-icon>
@@ -66,6 +71,10 @@
             <el-icon><Plus /></el-icon>
             <span>{{ t('nav.newScan') }}</span>
           </router-link>
+          <!-- 退出登录 -->
+          <button class="topbar-btn logout-btn" @click="handleLogout" :title="'退出登录'">
+            <el-icon><SwitchButton /></el-icon>
+          </button>
         </div>
       </header>
 
@@ -83,13 +92,24 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores'
+import * as api from '@/api'
 
 const { t, locale } = useI18n()
 const route = useRoute()
+const router = useRouter()
 const appStore = useAppStore()
+
+const username = computed(() => localStorage.getItem('username') || 'admin')
+
+async function handleLogout() {
+  try { await api.logout() } catch {}
+  localStorage.removeItem('token')
+  localStorage.removeItem('username')
+  router.push('/login')
+}
 
 const navItems = [
   { to: '/dashboard', label: 'nav.dashboard', icon: 'DataBoard'   },
@@ -378,6 +398,25 @@ function toggleLocale() {
 .new-scan-btn:hover {
   background: #38bdf8;
   box-shadow: 0 0 24px rgba(14, 165, 233, 0.5);
+}
+
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 0 4px;
+}
+
+.logout-btn {
+  color: var(--text-muted);
+  border-color: var(--border-subtle);
+}
+
+.logout-btn:hover {
+  border-color: var(--severity-critical) !important;
+  color: var(--severity-critical) !important;
 }
 
 .page-content {

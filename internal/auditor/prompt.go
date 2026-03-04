@@ -3,6 +3,7 @@ package auditor
 import (
 	"bytes"
 	"codeqlAI/internal/model"
+	"sync"
 	"text/template"
 )
 
@@ -50,9 +51,24 @@ const userPromptTemplate = `CodeQL 静态分析发现了一个潜在漏洞，请
   "confidence": 0.0到1.0之间的小数
 }`
 
+// 预编译模板，避免每次调用时重复解析
+var (
+	userPromptTmpl     *template.Template
+	userPromptTmplOnce sync.Once
+	tmplParseErr       error
+)
+
+// getUserPromptTmpl 获取预编译的模板（延迟初始化）
+func getUserPromptTmpl() (*template.Template, error) {
+	userPromptTmplOnce.Do(func() {
+		userPromptTmpl, tmplParseErr = template.New("audit").Parse(userPromptTemplate)
+	})
+	return userPromptTmpl, tmplParseErr
+}
+
 // BuildUserPrompt 根据 Finding 渲染用户侧 Prompt
 func BuildUserPrompt(finding model.Finding) (string, error) {
-	tmpl, err := template.New("audit").Parse(userPromptTemplate)
+	tmpl, err := getUserPromptTmpl()
 	if err != nil {
 		return "", err
 	}
@@ -65,7 +81,11 @@ func BuildUserPrompt(finding model.Finding) (string, error) {
 		CodeSnippet: finding.CodeSnippet,
 	}
 
+	// 预估输出长度以优化 buffer 扩容
+	estimatedLen := len(userPromptTemplate) + len(finding.CodeSnippet) + 100
 	var buf bytes.Buffer
+	buf.Grow(estimatedLen)
+
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return "", err
 	}

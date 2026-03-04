@@ -30,20 +30,26 @@ type FindingFlow struct {
 	Flows    []FlowPath `json:"flows"`
 }
 
-// ParseCodeFlows 从 SARIF 文件中解析所有带 codeFlows 的 finding
+// ParseCodeFlows 从 SARIF 文件中解析所有带 codeFlows 的 finding。
+// 使用流式解码，避免将整个文件一次性载入内存。
 func ParseCodeFlows(sarifPath string) ([]FindingFlow, error) {
-	data, err := os.ReadFile(sarifPath)
+	f, err := os.Open(sarifPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read sarif file: %w", err)
+		return nil, fmt.Errorf("failed to open sarif file: %w", err)
 	}
+	defer f.Close()
 
-	// 使用带 codeFlows 扩展的 SARIF 结构体
 	var sarif sarifReportFull
-	if err := json.Unmarshal(data, &sarif); err != nil {
+	if err := json.NewDecoder(f).Decode(&sarif); err != nil {
 		return nil, fmt.Errorf("failed to parse sarif: %w", err)
 	}
 
-	var result []FindingFlow
+	// 以 results 总数为上限预分配，避免 append 反复扩容
+	total := 0
+	for _, r := range sarif.Runs {
+		total += len(r.Results)
+	}
+	result := make([]FindingFlow, 0, total)
 
 	for _, run := range sarif.Runs {
 		ruleMap := make(map[string]sarifRule, len(run.Tool.Driver.Rules))
@@ -64,32 +70,34 @@ func ParseCodeFlows(sarifPath string) ([]FindingFlow, error) {
 				line = loc.PhysicalLocation.Region.StartLine
 			}
 
-			meta := ruleMap[res.RuleID]
 			ff := FindingFlow{
 				RuleID:   res.RuleID,
 				Message:  res.Message.Text,
-				Severity: levelToSeverity(meta.DefaultConfiguration.Level),
+				Severity: levelToSeverity(ruleMap[res.RuleID].DefaultConfiguration.Level),
 				FilePath: filePath,
 				Line:     line,
+				Flows:    make([]FlowPath, 0, len(res.CodeFlows)),
 			}
 
 			for _, cf := range res.CodeFlows {
 				for _, tf := range cf.ThreadFlows {
-					var path FlowPath
+					// 不足 2 个节点无法构成路径，提前跳过避免无效分配
+					if len(tf.Locations) < 2 {
+						continue
+					}
+					// 长度已知，直接分配定长切片，用下标赋值代替 append
+					nodes := make([]FlowNode, len(tf.Locations))
 					for i, loc := range tf.Locations {
 						ploc := loc.Location.PhysicalLocation
-						node := FlowNode{
+						nodes[i] = FlowNode{
 							Index:    i,
 							FilePath: ploc.ArtifactLocation.URI,
 							Line:     ploc.Region.StartLine,
 							Column:   ploc.Region.StartColumn,
 							Message:  loc.Location.Message.Text,
 						}
-						path.Nodes = append(path.Nodes, node)
 					}
-					if len(path.Nodes) >= 2 {
-						ff.Flows = append(ff.Flows, path)
-					}
+					ff.Flows = append(ff.Flows, FlowPath{Nodes: nodes})
 				}
 			}
 
@@ -112,4 +120,3 @@ func levelToSeverity(level string) string {
 		return "low"
 	}
 }
-

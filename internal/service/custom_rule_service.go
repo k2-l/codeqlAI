@@ -12,16 +12,27 @@ import (
 	"gorm.io/gorm"
 )
 
+// allowedLanguages 支持的语言白名单（包级常量，避免重复创建）
+var allowedLanguages = map[string]bool{
+	"java":       true,
+	"go":         true,
+	"python":     true,
+	"javascript": true,
+	"cpp":        true,
+}
+
 // CustomRuleService 自定义 QL 规则管理
 type CustomRuleService struct {
-	db      *gorm.DB
+	db       *gorm.DB
 	rulesDir string // 规则文件存放目录
 }
 
 // NewCustomRuleService 初始化，rulesDir 为规则文件落盘目录
-func NewCustomRuleService(db *gorm.DB, rulesDir string) *CustomRuleService {
-	os.MkdirAll(rulesDir, 0755)
-	return &CustomRuleService{db: db, rulesDir: rulesDir}
+func NewCustomRuleService(db *gorm.DB, rulesDir string) (*CustomRuleService, error) {
+	if err := os.MkdirAll(rulesDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create rules directory: %w", err)
+	}
+	return &CustomRuleService{db: db, rulesDir: rulesDir}, nil
 }
 
 // CreateRuleRequest 创建规则的请求参数
@@ -42,12 +53,7 @@ type UpdateRuleRequest struct {
 
 // CreateRule 创建规则：写入数据库 + 落盘 .ql 文件
 func (s *CustomRuleService) CreateRule(req CreateRuleRequest) (*model.CustomRule, error) {
-	// 语言白名单
-	allowed := map[string]bool{
-		"java": true, "go": true, "python": true,
-		"javascript": true, "cpp": true,
-	}
-	if !allowed[req.Language] {
+	if !allowedLanguages[req.Language] {
 		return nil, fmt.Errorf("unsupported language: %s", req.Language)
 	}
 
@@ -65,7 +71,6 @@ func (s *CustomRuleService) CreateRule(req CreateRuleRequest) (*model.CustomRule
 
 	// 落盘 .ql 文件
 	if err := s.writeRuleFile(&rule); err != nil {
-		// 文件写失败不影响数据库记录，只记录日志
 		logger.Warn("failed to write rule file", zap.String("rule_id", rule.ID.String()), zap.Error(err))
 	}
 
@@ -101,11 +106,24 @@ func (s *CustomRuleService) UpdateRule(id uuid.UUID, req UpdateRuleRequest) (*mo
 		return nil, fmt.Errorf("rule not found: %w", err)
 	}
 
-	updates := map[string]interface{}{}
-	if req.Name != ""    { updates["name"] = req.Name }
-	if req.Description != "" { updates["description"] = req.Description }
-	if req.Content != "" { updates["content"] = req.Content }
-	if req.IsEnabled != nil { updates["is_enabled"] = *req.IsEnabled }
+	// 检查是否有更新内容
+	if req.Name == "" && req.Description == "" && req.Content == "" && req.IsEnabled == nil {
+		return &rule, nil // 无更新，直接返回
+	}
+
+	updates := make(map[string]interface{})
+	if req.Name != "" {
+		updates["name"] = req.Name
+	}
+	if req.Description != "" {
+		updates["description"] = req.Description
+	}
+	if req.Content != "" {
+		updates["content"] = req.Content
+	}
+	if req.IsEnabled != nil {
+		updates["is_enabled"] = *req.IsEnabled
+	}
 
 	if err := s.db.Model(&rule).Updates(updates).Error; err != nil {
 		return nil, fmt.Errorf("failed to update rule: %w", err)
@@ -165,7 +183,9 @@ func (s *CustomRuleService) writeRuleFile(rule *model.CustomRule) error {
 	path := filepath.Join(s.rulesDir, string(rule.Language), filename)
 
 	// 确保语言子目录存在
-	os.MkdirAll(filepath.Dir(path), 0755)
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return fmt.Errorf("failed to create language directory: %w", err)
+	}
 
 	if err := os.WriteFile(path, []byte(rule.Content), 0644); err != nil {
 		return fmt.Errorf("failed to write ql file: %w", err)

@@ -20,6 +20,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hibiken/asynq"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -71,9 +72,19 @@ func main() {
 	}
 	asynqClient := asynq.NewClient(redisOpt)
 
+	// 独立的 Redis client（用于验证码存取）
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     cfg.Redis.Addr,
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
+	})
+
 	// 6. 初始化业务层（需在 processor 之前，ruleService 注入 processor）
 	inspector    := asynq.NewInspector(redisOpt)
-	ruleService  := service.NewCustomRuleService(db, "storage/custom_rules")
+	ruleService,err  := service.NewCustomRuleService(db, "storage/custom_rules")
+	if err != nil {
+		logger.Fatal("failed to init rule service", zap.Error(err))
+	}
 	scanService  := service.NewScanService(db, asynqClient, inspector)
 
 	// 7. 初始化 Asynq Worker
@@ -102,17 +113,18 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	router := gin.Default()
-	apiV1 := router.Group("/api/v1")
 
-	// 扫描任务
-	v1.NewHandler(scanService).RegisterRoutes(apiV1)
-	// 自定义 QL 规则
-	v1.NewRuleHandler(ruleService).RegisterRoutes(apiV1)
-	// 漏洞地图 + 任务列表
-	v1.NewVulnMapHandler(db).RegisterRoutes(apiV1)
-	// AI 设置
+	// 公开路由（不需要鉴权）
+	apiV1 := router.Group("/api/v1")
+	v1.NewAuthHandler(cfg.Auth, rdb).RegisterRoutes(apiV1)
+
+	// 受保护路由（需要 JWT Token）
+	protected := apiV1.Use(v1.JWTMiddleware(cfg.Auth.JWTSecret))
+	v1.NewHandler(scanService).RegisterRoutes(protected)
+	v1.NewRuleHandler(ruleService).RegisterRoutes(protected)
+	v1.NewVulnMapHandler(db).RegisterRoutes(protected)
 	settingsService := service.NewAISettingsService("configs/config.yaml")
-	v1.NewSettingsHandler(settingsService).RegisterSettingsRoutes(apiV1)
+	v1.NewSettingsHandler(settingsService).RegisterSettingsRoutes(protected)
 
 	// 健康检查
 	router.GET("/health", func(c *gin.Context) {

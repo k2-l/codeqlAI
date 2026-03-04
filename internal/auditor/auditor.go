@@ -136,8 +136,15 @@ func (a *Auditor) AuditFinding(findingID uuid.UUID) (*model.AiResult, error) {
 func parseAIResponse(raw string) (*aiResponse, error) {
 	// 清理 AI 可能返回的 markdown 代码块包裹
 	cleaned := strings.TrimSpace(raw)
-	cleaned = strings.TrimPrefix(cleaned, "```json")
-	cleaned = strings.TrimPrefix(cleaned, "```")
+
+	// 移除开头的 ```json 或 ```
+	if strings.HasPrefix(cleaned, "```json") {
+		cleaned = strings.TrimPrefix(cleaned, "```json")
+	} else if strings.HasPrefix(cleaned, "```") {
+		cleaned = strings.TrimPrefix(cleaned, "```")
+	}
+
+	// 移除结尾的 ```
 	cleaned = strings.TrimSuffix(cleaned, "```")
 	cleaned = strings.TrimSpace(cleaned)
 
@@ -159,8 +166,13 @@ func parseAIResponse(raw string) (*aiResponse, error) {
 
 // markFailed 将 Finding 状态回滚为 pending，方便用户重试
 func (a *Auditor) markFailed(findingID uuid.UUID) {
-	a.db.Model(&model.Finding{}).Where("id = ?", findingID).
-		Update("audit_status", model.AuditStatusPending)
+	if err := a.db.Model(&model.Finding{}).Where("id = ?", findingID).
+		Update("audit_status", model.AuditStatusPending).Error; err != nil {
+		logger.Error("failed to mark finding as failed",
+			zap.String("finding_id", findingID.String()),
+			zap.Error(err),
+		)
+	}
 }
 
 // printAuditResult 在控制台打印格式化的审计结论
@@ -170,28 +182,31 @@ func printAuditResult(finding model.Finding, result model.AiResult) {
 		exploitable = "✅ 可利用"
 	}
 
-	fmt.Printf(`
---------------------------------------------------
-[Finding] %s (line %d)
-[Rule]    %s
-[审计结论] %s
-[可信度]  %.2f
-[PoC类型] %s
---------------------------------------------------
-[AI 分析]
-%s
---------------------------------------------------
-[PoC 内容]
-%s
---------------------------------------------------
-`,
-		finding.FilePath,
-		finding.StartLine,
-		finding.RuleID,
-		exploitable,
-		result.Confidence,
-		result.PocType,
-		result.AnalysisLogic,
-		result.PocContent,
-	)
+	// 预估输出长度，减少内存分配
+	estimatedLen := 100 + len(finding.FilePath) + len(finding.RuleID) +
+		len(result.AnalysisLogic) + len(result.PocContent)
+
+	var sb strings.Builder
+	sb.Grow(estimatedLen)
+
+	sb.WriteString("\n--------------------------------------------------\n")
+	sb.WriteString("[Finding] ")
+	sb.WriteString(finding.FilePath)
+	sb.WriteString(" (line ")
+	sb.WriteString(fmt.Sprintf("%d", finding.StartLine))
+	sb.WriteString(")\n[Rule]    ")
+	sb.WriteString(finding.RuleID)
+	sb.WriteString("\n[审计结论] ")
+	sb.WriteString(exploitable)
+	sb.WriteString("\n[可信度]  ")
+	sb.WriteString(fmt.Sprintf("%.2f", result.Confidence))
+	sb.WriteString("\n[PoC类型] ")
+	sb.WriteString(string(result.PocType))
+	sb.WriteString("\n--------------------------------------------------\n[AI 分析]\n")
+	sb.WriteString(result.AnalysisLogic)
+	sb.WriteString("\n--------------------------------------------------\n[PoC 内容]\n")
+	sb.WriteString(result.PocContent)
+	sb.WriteString("\n--------------------------------------------------\n")
+
+	fmt.Print(sb.String())
 }
