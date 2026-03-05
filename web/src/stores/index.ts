@@ -10,7 +10,6 @@ export const useTaskStore = defineStore('task', () => {
   const findings = ref<Finding[]>([])
   const loading = ref(false)
 
-  // 从任务列表计算仪表盘统计（前端聚合，避免额外接口）
   const stats = computed<DashboardStats>(() => {
     const total = tasks.value.length
     const completed = tasks.value.filter(t => t.status === 'completed').length
@@ -37,8 +36,13 @@ export const useTaskStore = defineStore('task', () => {
   })
 
   async function fetchTasks() {
-    // 后端暂无 list 接口，用已知 tasks 更新状态
-    // 后续可添加 GET /api/v1/tasks 接口
+    loading.value = true
+    try {
+      const res = await api.listTasks()
+      tasks.value = res.items
+    } finally {
+      loading.value = false
+    }
   }
 
   function addTask(task: Task) {

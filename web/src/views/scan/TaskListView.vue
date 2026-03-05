@@ -220,7 +220,10 @@ const getDuration = (start?: string, end?: string) => {
 
 // 自动轮询进行中的任务
 let pollTimer: ReturnType<typeof setInterval>
-onMounted(() => {
+onMounted(async () => {
+  // 每次进入页面都从后端拉取最新任务列表，保证后端重启或数据变化后数据不丢失
+  await taskStore.fetchTasks()
+
   pollTimer = setInterval(() => {
     const running = taskStore.tasks.filter(t => isRunning(t.status))
     running.forEach(t => refreshTask(t.id))
