@@ -122,7 +122,7 @@ func main() {
 	protected := apiV1.Use(v1.JWTMiddleware(cfg.Auth.JWTSecret))
 	v1.NewHandler(scanService).RegisterRoutes(protected)
 	v1.NewRuleHandler(ruleService).RegisterRoutes(protected)
-	v1.NewVulnMapHandler(db).RegisterRoutes(protected)
+	v1.NewVulnMapHandler(db, executor).RegisterRoutes(protected)
 	settingsService := service.NewAISettingsService("configs/config.yaml")
 	v1.NewSettingsHandler(settingsService).RegisterSettingsRoutes(protected)
 

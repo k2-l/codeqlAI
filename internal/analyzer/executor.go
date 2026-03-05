@@ -14,23 +14,19 @@ import (
 	"go.uber.org/zap"
 )
 
-// allowedLanguages 白名单，包级变量只初始化一次，避免每次调用重复分配 map
-var allowedLanguages = map[string]bool{
-	"java":       true,
-	"go":         true,
-	"python":     true,
-	"javascript": true,
-	"cpp":        true,
-}
+// defaultLanguages 未配置时的兜底列表
+var defaultLanguages = []string{"java", "go", "python", "javascript", "cpp"}
 
 // Executor 封装 CodeQL CLI 调用
 type Executor struct {
-	binaryPath    string
-	querySuite    string
-	threads       int
-	timeoutMinute int
-	storagePath   string
-	threadsArg    string // 预计算，避免每次 Sprintf
+	binaryPath       string
+	querySuite       string
+	threads          int
+	timeoutMinute    int
+	storagePath      string
+	threadsArg       string
+	allowedLanguages map[string]bool // 从配置构建，运行时不变
+	languages        []string        // 有序列表，供前端展示用
 }
 
 // NewExecutor 初始化 Executor，同时做环境检查
@@ -54,20 +50,33 @@ func NewExecutor(cfg configs.CodeQLConfig) (*Executor, error) {
 		timeoutMinute = 30
 	}
 
+	// 构建语言白名单，未配置则使用默认列表
+	langs := cfg.Languages
+	if len(langs) == 0 {
+		langs = defaultLanguages
+	}
+	allowed := make(map[string]bool, len(langs))
+	for _, l := range langs {
+		allowed[l] = true
+	}
+
 	logger.Info("CodeQL executor initialized",
 		zap.String("binary", binary),
 		zap.String("query_suite", cfg.QuerySuite),
 		zap.Int("threads", threads),
 		zap.Int("timeout_minute", timeoutMinute),
+		zap.Strings("languages", langs),
 	)
 
 	return &Executor{
-		binaryPath:    binary,
-		querySuite:    cfg.QuerySuite,
-		threads:       threads,
-		timeoutMinute: timeoutMinute,
-		storagePath:   cfg.StoragePath,
-		threadsArg:    "--threads=" + strconv.Itoa(threads), // 启动时算一次，后续复用
+		binaryPath:       binary,
+		querySuite:       cfg.QuerySuite,
+		threads:          threads,
+		timeoutMinute:    timeoutMinute,
+		storagePath:      cfg.StoragePath,
+		threadsArg:       "--threads=" + strconv.Itoa(threads),
+		allowedLanguages: allowed,
+		languages:        langs,
 	}, nil
 }
 
@@ -98,7 +107,7 @@ func (e *Executor) timeout() time.Duration {
 
 // CreateDatabase 调用 codeql database create 为指定代码目录建库
 func (e *Executor) CreateDatabase(taskID string, language string, sourceRoot string) error {
-	if err := validateLanguage(language); err != nil {
+	if err := e.validateLanguage(language); err != nil {
 		return err
 	}
 
@@ -142,7 +151,7 @@ func (e *Executor) CreateDatabase(taskID string, language string, sourceRoot str
 // RunAnalysis 调用 codeql database analyze 运行查询并输出 SARIF
 // customQLPath 为空则使用官方查询套件
 func (e *Executor) RunAnalysis(taskID string, language string, customQLPath string) error {
-	if err := validateLanguage(language); err != nil {
+	if err := e.validateLanguage(language); err != nil {
 		return err
 	}
 
@@ -205,10 +214,15 @@ func (e *Executor) runCommand(ctx context.Context, args ...string) (string, erro
 	return string(bytes.TrimSpace(out)), err
 }
 
+// Languages 返回当前支持的语言列表（供 API 层调用）
+func (e *Executor) Languages() []string {
+	return e.languages
+}
+
 // validateLanguage 白名单校验，防止语言参数被注入恶意命令
-func validateLanguage(language string) error {
-	if !allowedLanguages[language] {
-		return fmt.Errorf("unsupported language: %q, allowed: java/go/python/javascript/cpp", language)
+func (e *Executor) validateLanguage(language string) error {
+	if !e.allowedLanguages[language] {
+		return fmt.Errorf("unsupported language: %q, allowed: %v", language, e.languages)
 	}
 	return nil
 }

@@ -136,10 +136,11 @@ const creating = ref(false)
 const saving   = ref(false)
 const langFilter = ref('')
 
-const languages = ['java', 'go', 'python', 'javascript', 'cpp']
+const languages = ref<string[]>([])
 
+// 表单默认语言在 languages 加载后再设置
 const form = reactive({
-  name: '', description: '', language: 'java', content: '',
+  name: '', description: '', language: '', content: '',
 })
 
 const lineCount = computed(() => {
@@ -173,7 +174,7 @@ function selectRule(rule: CustomRule) {
 function openCreate() {
   creating.value = true
   selected.value = null
-  form.name = ''; form.description = ''; form.language = 'java'; form.content = ''
+  form.name = ''; form.description = ''; form.language = languages.value[0] ?? ''; form.content = ''
 }
 
 function updateLineCount() {}
@@ -224,7 +225,14 @@ async function handleDelete() {
 
 const formatTime = (s: string) => dayjs(s).format('YYYY-MM-DD HH:mm')
 
-onMounted(loadRules)
+onMounted(async () => {
+  const [langs] = await Promise.all([
+    api.listLanguages(),
+    loadRules(),
+  ])
+  languages.value = langs
+  if (langs.length > 0 && !form.language) form.language = langs[0]
+})
 </script>
 
 <style scoped>

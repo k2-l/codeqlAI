@@ -3,7 +3,7 @@ export type TaskStatus =
   | 'pending' | 'cloning' | 'building'
   | 'analyzing' | 'ai_reviewing' | 'completed' | 'failed'
 
-export type Language = 'java' | 'go' | 'python' | 'javascript' | 'cpp'
+export type Language = string // 由后端配置决定，不在前端硬编码
 export type Severity  = 'critical' | 'high' | 'medium' | 'low' | 'note'
 export type AuditStatus = 'pending' | 'processing' | 'completed' | 'skipped'
 export type PocType = 'http_request' | 'python_script' | 'curl' | 'not_applicable'

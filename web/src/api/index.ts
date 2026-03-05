@@ -100,6 +100,9 @@ export const getVulnMap = (taskId: string) =>
 export const listTasks = (status?: string) =>
   http.get<{ total: number; items: any[] }>('/tasks', { params: status ? { status } : {} }).then(r => r.data)
 
+export const listLanguages = () =>
+  http.get<{ items: string[] }>('/languages').then(r => r.data.items)
+
 // ===== Health =====
 export const checkHealth = () =>
   axios.get<{ status: string }>('/health').then(r => r.data)

@@ -231,7 +231,7 @@ const availableRules = ref<CustomRule[]>([])
 const form = reactive({
   project_name:   '',
   task_name:      '',
-  language:       'java' as Language,
+  language:       '' as Language,
   source_path:    '',
   git_url:        '',
   git_branch:     '',
@@ -240,13 +240,8 @@ const form = reactive({
   custom_rule_id: '',
 })
 
-const languages = [
-  { value: 'java',       label: 'Java',       icon: '☕' },
-  { value: 'go',         label: 'Go',         icon: '🐹' },
-  { value: 'python',     label: 'Python',     icon: '🐍' },
-  { value: 'javascript', label: 'JavaScript', icon: '🟨' },
-  { value: 'cpp',        label: 'C++',        icon: '⚙️' },
-]
+// 从后端动态加载，config.yaml 里加一行即可支持新语言
+const languages = ref<{ value: string; label: string }[]>([])
 
 const rules = {
   project_name: [{ required: true, message: 'Project name is required', trigger: 'blur' }],
@@ -297,8 +292,14 @@ async function handleSubmit() {
 }
 
 onMounted(async () => {
-  const res = await api.listRules()
-  availableRules.value = res.items.filter((r: any) => r.is_enabled)
+  // 并行加载语言列表和自定义规则
+  const [langs, rulesRes] = await Promise.all([
+    api.listLanguages(),
+    api.listRules(),
+  ])
+  languages.value = langs.map(l => ({ value: l, label: l.charAt(0).toUpperCase() + l.slice(1) }))
+  if (langs.length > 0 && !form.language) form.language = langs[0]
+  availableRules.value = rulesRes.items.filter((r: any) => r.is_enabled)
 })
 </script>
 

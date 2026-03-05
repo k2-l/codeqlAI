@@ -47,11 +47,12 @@ type RedisConfig struct {
 }
 
 type CodeQLConfig struct {
-	BinaryPath    string `yaml:"binary_path"`  // codeql 二进制路径，留空则从 PATH 查找
-	QuerySuite    string `yaml:"query_suite"`  // 默认查询套件
-	Threads       int    `yaml:"threads"`      // 并发线程数
-	TimeoutMinute int    `yaml:"timeout_minute"` // 单次查询超时（分钟）
-	StoragePath   string `yaml:"storage_path"` // 临时文件存放目录
+	BinaryPath    string   `yaml:"binary_path"`
+	QuerySuite    string   `yaml:"query_suite"`
+	Threads       int      `yaml:"threads"`
+	TimeoutMinute int      `yaml:"timeout_minute"`
+	StoragePath   string   `yaml:"storage_path"`
+	Languages     []string `yaml:"languages"` // 支持的扫描语言列表，留空则使用默认值
 }
 
 type AIConfig struct {
