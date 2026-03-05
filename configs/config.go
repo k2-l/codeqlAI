@@ -53,6 +53,7 @@ type CodeQLConfig struct {
 	TimeoutMinute int      `yaml:"timeout_minute"`
 	StoragePath   string   `yaml:"storage_path"`
 	Languages     []string `yaml:"languages"` // 支持的扫描语言列表，留空则使用默认值
+	RAM           int      `yaml:"ram_mb"` // CodeQL 最大内存（MB），0 表示不限制
 }
 
 type AIConfig struct {

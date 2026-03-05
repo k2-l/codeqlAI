@@ -199,15 +199,25 @@ async function refreshAll() {
 }
 
 async function handleDelete(task: Task) {
-  await ElMessageBox.confirm(t('task.confirmDelete'), t('task.delete'), {
-    confirmButtonText: t('common.confirm'),
-    cancelButtonText: t('common.cancel'),
-    type: 'warning',
-    customClass: 'dark-msgbox',
-  })
-  await api.deleteTask(task.id)
-  taskStore.removeTask(task.id)
-  ElMessage.success(t('task.deleteSuccess'))
+  try {
+    await ElMessageBox.confirm(t('task.confirmDelete'), t('task.delete'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
+      type: 'warning',
+      customClass: 'dark-msgbox',
+      appendTo: 'body',
+    })
+  } catch {
+    return // 用户点了取消，正常退出
+  }
+
+  try {
+    await api.deleteTask(task.id)
+    taskStore.removeTask(task.id)
+    ElMessage.success(t('task.deleteSuccess'))
+  } catch (err: any) {
+    ElMessage.error(err?.response?.data?.error || t('task.deleteFailed') || '删除失败')
+  }
 }
 
 const formatTime = (s: string) => dayjs(s).format('YYYY-MM-DD HH:mm')

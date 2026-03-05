@@ -13,9 +13,10 @@ app:
 codeql:
   binary_path: ""           # 留空则自动从系统 PATH 查找
   query_suite: "security-and-quality"  # 对应 java-security-and-quality.qls，覆盖安全+质量规则
-  threads: 4
-  timeout_minute: 30
+  threads: 1
+  timeout_minute: 60
   storage_path: "./storage"
+  ram_mb: 8192
   languages:                # 支持的扫描语言，新增语言只需在此添加一行
     - java
     - go

@@ -142,7 +142,6 @@ function toggleLocale() {
 .layout {
   display: flex;
   height: 100vh;
-  overflow: hidden;
   background: var(--bg-base);
 }
 

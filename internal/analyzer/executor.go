@@ -14,10 +14,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// defaultLanguages 未配置时的兜底列表
 var defaultLanguages = []string{"java", "go", "python", "javascript", "cpp"}
 
-// Executor 封装 CodeQL CLI 调用
 type Executor struct {
 	binaryPath       string
 	querySuite       string
@@ -25,11 +23,11 @@ type Executor struct {
 	timeoutMinute    int
 	storagePath      string
 	threadsArg       string
-	allowedLanguages map[string]bool // 从配置构建，运行时不变
-	languages        []string        // 有序列表，供前端展示用
+	ramArg           string          // "--ram=N"，空表示不限制
+	allowedLanguages map[string]bool
+	languages        []string
 }
 
-// NewExecutor 初始化 Executor，同时做环境检查
 func NewExecutor(cfg configs.CodeQLConfig) (*Executor, error) {
 	binary := "codeql"
 	if cfg.BinaryPath != "" {
@@ -50,7 +48,7 @@ func NewExecutor(cfg configs.CodeQLConfig) (*Executor, error) {
 		timeoutMinute = 30
 	}
 
-	// 构建语言白名单，未配置则使用默认列表
+	// 构建语言白名单
 	langs := cfg.Languages
 	if len(langs) == 0 {
 		langs = defaultLanguages
@@ -60,11 +58,18 @@ func NewExecutor(cfg configs.CodeQLConfig) (*Executor, error) {
 		allowed[l] = true
 	}
 
+	// --ram 参数，0 表示不限制
+	ramArg := ""
+	if cfg.RAM > 0 {
+		ramArg = "--ram=" + strconv.Itoa(cfg.RAM)
+	}
+
 	logger.Info("CodeQL executor initialized",
 		zap.String("binary", binary),
 		zap.String("query_suite", cfg.QuerySuite),
 		zap.Int("threads", threads),
 		zap.Int("timeout_minute", timeoutMinute),
+		zap.Int("ram_mb", cfg.RAM),
 		zap.Strings("languages", langs),
 	)
 
@@ -75,12 +80,12 @@ func NewExecutor(cfg configs.CodeQLConfig) (*Executor, error) {
 		timeoutMinute:    timeoutMinute,
 		storagePath:      cfg.StoragePath,
 		threadsArg:       "--threads=" + strconv.Itoa(threads),
+		ramArg:           ramArg,
 		allowedLanguages: allowed,
 		languages:        langs,
 	}, nil
 }
 
-// checkBinary 检查 codeql 二进制是否存在且可执行
 func checkBinary(binary string) error {
 	path, err := exec.LookPath(binary)
 	if err != nil {
@@ -90,22 +95,22 @@ func checkBinary(binary string) error {
 	return nil
 }
 
-// DBPath 返回某个任务的 CodeQL 数据库存放路径
 func (e *Executor) DBPath(taskID string) string {
 	return filepath.Join(e.storagePath, taskID, "codeql-db")
 }
 
-// SarifPath 返回某个任务的 SARIF 结果存放路径
 func (e *Executor) SarifPath(taskID string) string {
 	return filepath.Join(e.storagePath, taskID, "results.sarif")
 }
 
-// timeout 返回统一的超时 Duration，避免两处重复计算
 func (e *Executor) timeout() time.Duration {
 	return time.Duration(e.timeoutMinute) * time.Minute
 }
 
-// CreateDatabase 调用 codeql database create 为指定代码目录建库
+func (e *Executor) Languages() []string {
+	return e.languages
+}
+
 func (e *Executor) CreateDatabase(taskID string, language string, sourceRoot string) error {
 	if err := e.validateLanguage(language); err != nil {
 		return err
@@ -122,6 +127,9 @@ func (e *Executor) CreateDatabase(taskID string, language string, sourceRoot str
 		"--source-root=" + sourceRoot,
 		e.threadsArg,
 		"--overwrite",
+	}
+	if e.ramArg != "" {
+		args = append(args, e.ramArg)
 	}
 
 	logger.Info("creating CodeQL database",
@@ -148,8 +156,6 @@ func (e *Executor) CreateDatabase(taskID string, language string, sourceRoot str
 	return nil
 }
 
-// RunAnalysis 调用 codeql database analyze 运行查询并输出 SARIF
-// customQLPath 为空则使用官方查询套件
 func (e *Executor) RunAnalysis(taskID string, language string, customQLPath string) error {
 	if err := e.validateLanguage(language); err != nil {
 		return err
@@ -177,6 +183,9 @@ func (e *Executor) RunAnalysis(taskID string, language string, customQLPath stri
 		"--output=" + sarifPath,
 		e.threadsArg,
 	}
+	if e.ramArg != "" {
+		args = append(args, e.ramArg)
+	}
 
 	logger.Info("running CodeQL analysis",
 		zap.String("task_id", taskID),
@@ -201,12 +210,10 @@ func (e *Executor) RunAnalysis(taskID string, language string, customQLPath stri
 	return nil
 }
 
-// runCommand 执行 codeql 命令，返回合并后的输出和错误
 func (e *Executor) runCommand(ctx context.Context, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, e.binaryPath, args...)
 	out, err := cmd.CombinedOutput()
 
-	// 优先判断超时：ctx 已超时时底层 err 是"signal: killed"，语义不清晰
 	if ctx.Err() == context.DeadlineExceeded {
 		return string(bytes.TrimSpace(out)), fmt.Errorf("command timed out after %d minutes", e.timeoutMinute)
 	}
@@ -214,12 +221,6 @@ func (e *Executor) runCommand(ctx context.Context, args ...string) (string, erro
 	return string(bytes.TrimSpace(out)), err
 }
 
-// Languages 返回当前支持的语言列表（供 API 层调用）
-func (e *Executor) Languages() []string {
-	return e.languages
-}
-
-// validateLanguage 白名单校验，防止语言参数被注入恶意命令
 func (e *Executor) validateLanguage(language string) error {
 	if !e.allowedLanguages[language] {
 		return fmt.Errorf("unsupported language: %q, allowed: %v", language, e.languages)
