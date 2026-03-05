@@ -105,7 +105,7 @@ func (h *Handler) DeleteTask(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "task deleted successfully",
+		"message": "任务删除成功",
 		"task_id": taskID,
 	})
 }
@@ -115,7 +115,7 @@ func (h *Handler) DeleteTask(c *gin.Context) {
 func (h *Handler) GetTaskByName(c *gin.Context) {
 	name := c.Param("name")
 	if name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "task name is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "任务名称是必填项"})
 		return
 	}
 
@@ -131,7 +131,7 @@ func (h *Handler) GetTaskByName(c *gin.Context) {
 func (h *Handler) TriggerAIAudit(c *gin.Context) {
 	findingID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid finding_id"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的 finding_id"})
 		return
 	}
 
@@ -141,7 +141,7 @@ func (h *Handler) TriggerAIAudit(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":    "AI audit task enqueued",
+		"message":    "AI审计任务已排队",
 		"finding_id": findingID,
 	})
 }

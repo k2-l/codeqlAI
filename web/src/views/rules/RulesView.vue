@@ -371,6 +371,7 @@ onMounted(loadRules)
   border-radius: var(--radius-md);
   overflow: hidden;
   min-height: 240px;
+  width: 100%;
 }
 
 .line-numbers {
